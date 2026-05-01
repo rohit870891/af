@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: auto-forward-bot-v2
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: API_ID
+        sync: false
+      - key: API_HASH
+        sync: false
+      - key: BOT_TOKEN
+        sync: false
+      - key: BOT_SESSION
+        value: bot
+      - key: DATABASE
+        sync: false
+        description: MongoDB Connection String (URI)
+      - key: DATABASE_NAME
+        value: forward-bot
+        description: Name of the database to use
+      - key: BOT_OWNER_ID
+        sync: false
+        description: Telegram User ID of the bot owner

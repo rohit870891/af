@@ -1,0 +1,14 @@
+pyrofork
+motor
+TgCrypto
+Dnspython
+cryptg
+tgcrypto
+Pyrogram==2.0.93
+psutil
+opencv-python-headless
+python-decouple
+requests
+speedtest-cli
+pymongo
+aiohttp
