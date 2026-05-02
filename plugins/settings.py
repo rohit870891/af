@@ -439,7 +439,7 @@ async def settings_query(bot, query):
          
          target_buttons = []
          for channel in channels:
-            target_buttons.append([InlineKeyboardButton(channel['title'], callback_data=f"settings#addpt|{source_id}|{source_title}|{channel['chat_id']}|{channel['title']}")])
+            target_buttons.append([InlineKeyboardButton(channel['title'], callback_data=f"settings#addpt|{source_id}|{channel['chat_id']}")])
          target_buttons.append([InlineKeyboardButton("❌ Cancel", callback_data="settings#autoforward")])
          
          await text.edit_text(Translation.ADD_PAIR_TARGET, reply_markup=InlineKeyboardMarkup(target_buttons))
@@ -461,7 +461,18 @@ async def settings_query(bot, query):
      await query.message.edit_text("<b>Pair removed successfully.</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('↩ Back', callback_data="settings#autoforward")]]))
 
   elif type.startswith("addpt"):
-     _, source_id, source_title, target_id, target_title = type.split('|')
+     _, source_id, target_id = type.split('|')
+     try:
+        source_id = int(source_id)
+        target_id = int(target_id)
+     except:
+        pass
+     try:
+        source_title = (await bot.get_chat(source_id)).title
+        target_title = (await bot.get_chat(target_id)).title
+     except:
+        source_title = source_id
+        target_title = target_id
      await db.add_pair(user_id, source_id, source_title, target_id, target_title)
      await query.message.edit_text(
         f"<b>Successfully paired!</b>\n\n<b>Source:</b> <code>{source_title}</code>\n<b>Target:</b> <code>{target_title}</code>",
