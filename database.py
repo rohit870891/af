@@ -175,6 +175,9 @@ class Database:
         data = {} if all else {'user_id': int(user_id)}
         return await self.nfy.delete_many(data)
 
+    async def get_all_frwd(self):
+        return self.nfy.find({})
+
 
     async def add_pair(self, user_id: int, source_id: Union[int, str], source_title: str, target_id: int, target_title: str):
         return await self.pairs.insert_one({
@@ -197,7 +200,7 @@ class Database:
         from bson import ObjectId
         return await self.pairs.find_one({"_id": ObjectId(pair_id), "user_id": int(user_id)})
 
-    async def get_all_pairs(self):
+    def get_all_pairs(self):
         return self.pairs.find({})
 
 
