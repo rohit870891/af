@@ -396,6 +396,76 @@ async def settings_query(bot, query):
   elif type.startswith("alert"):
     alert = type.split('_')[1]
     await query.answer(alert, show_alert=True)
+
+  elif type=="autoforward":
+     buttons = []
+     pairs = await db.get_user_pairs(user_id)
+     for pair in pairs:
+        buttons.append([InlineKeyboardButton(f"{pair['source_title']} ➜ {pair['target_title']}",
+                         callback_data=f"settings#editpair_{pair['_id']}")])
+     buttons.append([InlineKeyboardButton('✚ Add Pair ✚', 
+                      callback_data="settings#addpair")])
+     buttons.append([InlineKeyboardButton('↩ Back', 
+                      callback_data="settings#main")])
+     await query.message.edit_text(
+       Translation.AUTO_FRWD_MAIN,
+       reply_markup=InlineKeyboardMarkup(buttons))
+
+  elif type=="addpair":
+     await query.message.delete()
+     try:
+         text = await bot.send_message(user_id, Translation.ADD_PAIR_SOURCE)
+         source_msg = await bot.listen(chat_id=user_id, timeout=300)
+         if source_msg.text=="/cancel":
+            await source_msg.delete()
+            return await text.edit_text("<b>process canceled</b>", reply_markup=main_buttons())
+         
+         if source_msg.forward_date:
+            source_id = source_msg.forward_from_chat.id
+            source_title = source_msg.forward_from_chat.title
+         elif source_msg.text and "t.me/" in source_msg.text:
+            # Simple link parsing, but forward is better
+            await source_msg.delete()
+            return await text.edit_text("<b>Please forward a message instead of sending a link for accuracy.</b>", reply_markup=main_buttons())
+         else:
+            await source_msg.delete()
+            return await text.edit_text("<b>This is not a forward message.</b>", reply_markup=main_buttons())
+
+         await source_msg.delete()
+         
+         channels = await db.get_user_channels(user_id)
+         if not channels:
+            return await text.edit_text("<b>Please add a target channel first in 'Channels' menu.</b>", reply_markup=main_buttons())
+         
+         target_buttons = []
+         for channel in channels:
+            target_buttons.append([InlineKeyboardButton(channel['title'], callback_data=f"settings#addpt|{source_id}|{source_title}|{channel['chat_id']}|{channel['title']}")])
+         target_buttons.append([InlineKeyboardButton("❌ Cancel", callback_data="settings#autoforward")])
+         
+         await text.edit_text(Translation.ADD_PAIR_TARGET, reply_markup=InlineKeyboardMarkup(target_buttons))
+     except asyncio.exceptions.TimeoutError:
+         await bot.send_message(user_id, 'Process has been automatically cancelled')
+
+  elif type.startswith("editpair"):
+     pair_id = type.split('_')[1]
+     pair = await db.get_pair_details(user_id, pair_id)
+     buttons = [[InlineKeyboardButton('❌ Remove Pair ❌', callback_data=f"settings#removepair_{pair_id}")],
+                [InlineKeyboardButton('↩ Back', callback_data="settings#autoforward")]]
+     await query.message.edit_text(
+        Translation.PAIR_DETAILS.format(pair['source_title'], pair['target_title']),
+        reply_markup=InlineKeyboardMarkup(buttons))
+
+  elif type.startswith("removepair"):
+     pair_id = type.split('_')[1]
+     await db.remove_pair(user_id, pair_id)
+     await query.message.edit_text("<b>Pair removed successfully.</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('↩ Back', callback_data="settings#autoforward")]]))
+
+  elif type.startswith("addpt"):
+     _, source_id, source_title, target_id, target_title = type.split('|')
+     await db.add_pair(user_id, source_id, source_title, target_id, target_title)
+     await query.message.edit_text(
+        f"<b>Successfully paired!</b>\n\n<b>Source:</b> <code>{source_title}</code>\n<b>Target:</b> <code>{target_title}</code>",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('↩ Back', callback_data="settings#autoforward")]]))
       
 def main_buttons():
   buttons = [[
@@ -415,7 +485,9 @@ def main_buttons():
                     callback_data=f'settings#button')
        ],[
        InlineKeyboardButton('Exᴛʀᴀ Sᴇᴛᴛɪɴɢs 🧪',
-                    callback_data='settings#nextfilters')
+                    callback_data='settings#nextfilters'),
+       InlineKeyboardButton('🔄 Aᴜᴛᴏ Fᴡᴅ',
+                    callback_data='settings#autoforward')
        ],[      
        InlineKeyboardButton('⫷ Bᴀᴄᴋ', callback_data='back')
        ]]

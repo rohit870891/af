@@ -1,5 +1,6 @@
 from os import environ
 from config import Config
+from typing import Union
 import motor.motor_asyncio
 from pymongo import MongoClient
 
@@ -19,6 +20,7 @@ class Database:
         self.col = self.db.users
         self.nfy = self.db.notify
         self.chl = self.db.channels
+        self.pairs = self.db.pairs
 
     def new_user(self, id, name):
         return dict(
@@ -173,8 +175,30 @@ class Database:
         data = {} if all else {'user_id': int(user_id)}
         return await self.nfy.delete_many(data)
 
-    async def get_all_frwd(self):
-        return self.nfy.find({})
+
+    async def add_pair(self, user_id: int, source_id: Union[int, str], source_title: str, target_id: int, target_title: str):
+        return await self.pairs.insert_one({
+            "user_id": int(user_id),
+            "source_id": source_id,
+            "source_title": source_title,
+            "target_id": int(target_id),
+            "target_title": target_title
+        })
+
+    async def remove_pair(self, user_id: int, pair_id: str):
+        from bson import ObjectId
+        return await self.pairs.delete_one({"_id": ObjectId(pair_id), "user_id": int(user_id)})
+
+    async def get_user_pairs(self, user_id: int):
+        pairs = self.pairs.find({"user_id": int(user_id)})
+        return [pair async for pair in pairs]
+
+    async def get_pair_details(self, user_id: int, pair_id: str):
+        from bson import ObjectId
+        return await self.pairs.find_one({"_id": ObjectId(pair_id), "user_id": int(user_id)})
+
+    async def get_all_pairs(self):
+        return self.pairs.find({})
 
 
 db = Database(Config.DATABASE_URI, Config.DATABASE_NAME)

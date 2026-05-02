@@ -65,6 +65,16 @@ class Bot(Client):
         except Exception as e:
             logging.error(f"Failed to send restart messages or connect to DB: {e}")
 
+        # Start Auto Forward clients and cache
+        try:
+            from plugins.auto_forward import start_user_clients, refresh_cache_loop, update_pairs_cache
+            await update_pairs_cache()
+            asyncio.create_task(refresh_cache_loop())
+            asyncio.create_task(start_user_clients(self))
+            logging.info("Auto Forward engine initialized.")
+        except Exception as e:
+            logging.error(f"Failed to initialize Auto Forward engine: {e}")
+
     async def stop(self, *args):
         msg = f"@{self.username} stopped. Bye."
         await super().stop()

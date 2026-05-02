@@ -113,3 +113,8 @@ class Translation(object):
 <i>° If the **SOURCE CHAT** is private your userbot must be member or your bot must be admin in there also</b></i>
 
 <b>If the above is checked then the yes button can be clicked</b>"""
+
+  AUTO_FRWD_MAIN = "<b><u>🔄 AUTO FORWARD SETTINGS</b></u>\n\n<b>Manage your auto-forwarding pairs here. Messages from source chats will be automatically forwarded to target chats based on your filters.</b>"
+  ADD_PAIR_SOURCE = "<b>❪ STEP 1: SET SOURCE CHAT ❫\n\nForward a message from the source chat you want to monitor.\n/cancel - Cancel this process</b>"
+  ADD_PAIR_TARGET = "<b>❪ STEP 2: CHOOSE TARGET CHAT ❫\n\nChoose the target chat where messages should be forwarded.\n/cancel - Cancel this process</b>"
+  PAIR_DETAILS = "<b><u>📄 PAIR DETAILS</b></u>\n\n<b>- SOURCE:</b> <code>{}</code>\n<b>- TARGET: </b> <code>{}</code>"
