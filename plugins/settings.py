@@ -399,6 +399,32 @@ async def settings_query(bot, query):
 
   elif type=="autoforward":
      buttons = []
+     configs = await get_configs(user_id)
+     auto_fwd = configs.get('auto_fwd', False)
+     buttons.append([InlineKeyboardButton(f"Mode: {'ENABLED ✅' if auto_fwd else 'DISABLED ❌'}", 
+                      callback_data=f"settings#toggleautofwd_{auto_fwd}")])
+     pairs = await db.get_user_pairs(user_id)
+     for pair in pairs:
+        buttons.append([InlineKeyboardButton(f"{pair['source_title']} ➜ {pair['target_title']}",
+                         callback_data=f"settings#editpair_{pair['_id']}")])
+     buttons.append([InlineKeyboardButton('✚ Add Pair ✚', 
+                      callback_data="settings#addpair")])
+     buttons.append([InlineKeyboardButton('↩ Back', 
+                      callback_data="settings#main")])
+     await query.message.edit_text(
+       Translation.AUTO_FRWD_MAIN,
+       reply_markup=InlineKeyboardMarkup(buttons))
+
+  elif type.startswith("toggleautofwd"):
+     value = type.split('_')[1]
+     new_val = False if value=="True" else True
+     await update_configs(user_id, 'auto_fwd', new_val)
+     # Re-show menu
+     buttons = []
+     configs = await get_configs(user_id)
+     auto_fwd = configs.get('auto_fwd', False)
+     buttons.append([InlineKeyboardButton(f"Mode: {'ENABLED ✅' if auto_fwd else 'DISABLED ❌'}", 
+                      callback_data=f"settings#toggleautofwd_{auto_fwd}")])
      pairs = await db.get_user_pairs(user_id)
      for pair in pairs:
         buttons.append([InlineKeyboardButton(f"{pair['source_title']} ➜ {pair['target_title']}",

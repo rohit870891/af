@@ -99,6 +99,7 @@ class Database:
             'protect': None,
             'button': None,
             'db_uri': None,
+            'auto_fwd': False,
             'filters': {
                 'poll': False,
                 'text': False,
