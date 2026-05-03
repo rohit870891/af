@@ -16,3 +16,4 @@ class temp(object):
     forwardings = 0
     BANNED_USERS = []
     IS_FRWD_CHAT = []
+    AUTO_FWD = {}

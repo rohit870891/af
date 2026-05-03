@@ -20,14 +20,22 @@ MG_BUFFERS = {}
 async def update_pairs_cache():
     global PAIRS_CACHE
     try:
-        all_pairs = await db.get_all_pairs().to_list(length=1000)
+        # Increase length to handle more pairs if needed, or iterate
+        all_pairs = await db.get_all_pairs().to_list(length=5000)
         new_cache = {}
         for pair in all_pairs:
             sid = pair['source_id']
+            # Ensure sid is consistent (int vs str)
+            try:
+                sid = int(sid)
+            except:
+                sid = str(sid)
+                
             if sid not in new_cache:
                 new_cache[sid] = []
             new_cache[sid].append(pair)
         PAIRS_CACHE = new_cache
+        logger.info(f"Pairs cache updated: {len(PAIRS_CACHE)} source(s) cached.")
     except Exception as e:
         logger.error(f"Error updating pairs cache: {e}")
 

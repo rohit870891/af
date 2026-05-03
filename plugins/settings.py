@@ -3,6 +3,7 @@ from database import db
 from translation import Translation
 from pyrogram import Client, filters
 from .test import get_configs, update_configs, CLIENT, parse_buttons
+from config import temp
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 CLIENT = CLIENT()
@@ -433,11 +434,7 @@ async def settings_query(bot, query):
                       callback_data="settings#addpair")])
      buttons.append([InlineKeyboardButton('↩ Back', 
                       callback_data="settings#main")])
-     await query.message.edit_text(
-       Translation.AUTO_FRWD_MAIN,
-       reply_markup=InlineKeyboardMarkup(buttons))
-
-  elif type=="addpair":
+   elif type=="addpair":
      await query.message.delete()
      try:
          text = await bot.send_message(user_id, Translation.ADD_PAIR_SOURCE)
@@ -450,7 +447,6 @@ async def settings_query(bot, query):
             source_id = source_msg.forward_from_chat.id
             source_title = source_msg.forward_from_chat.title
          elif source_msg.text and "t.me/" in source_msg.text:
-            # Simple link parsing, but forward is better
             await source_msg.delete()
             return await text.edit_text("<b>Please forward a message instead of sending a link for accuracy.</b>", reply_markup=main_buttons())
          else:
@@ -459,6 +455,13 @@ async def settings_query(bot, query):
 
          await source_msg.delete()
          
+         # Store source info in temp
+         temp.AUTO_FWD[user_id] = {
+             'source_id': source_id,
+             'source_title': source_title,
+             'targets': [] # To track selected targets in this session if needed
+         }
+         
          channels = await db.get_user_channels(user_id)
          if not channels:
             return await text.edit_text("<b>Please add a target channel first in 'Channels' menu.</b>", reply_markup=main_buttons())
@@ -466,6 +469,7 @@ async def settings_query(bot, query):
          target_buttons = []
          for channel in channels:
             target_buttons.append([InlineKeyboardButton(channel['title'], callback_data=f"settings#addpt|{source_id}|{channel['chat_id']}")])
+         target_buttons.append([InlineKeyboardButton("✅ Done", callback_data="settings#autoforward")])
          target_buttons.append([InlineKeyboardButton("❌ Cancel", callback_data="settings#autoforward")])
          
          await text.edit_text(Translation.ADD_PAIR_TARGET, reply_markup=InlineKeyboardMarkup(target_buttons))
@@ -484,25 +488,44 @@ async def settings_query(bot, query):
   elif type.startswith("removepair"):
      pair_id = type.split('_')[1]
      await db.remove_pair(user_id, pair_id)
+     from .auto_forward import update_pairs_cache
+     await update_pairs_cache()
      await query.message.edit_text("<b>Pair removed successfully.</b>", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('↩ Back', callback_data="settings#autoforward")]]))
 
   elif type.startswith("addpt"):
      _, source_id, target_id = type.split('|')
-     try:
-        source_id = int(source_id)
-        target_id = int(target_id)
-     except:
-        pass
-     try:
-        source_title = (await bot.get_chat(source_id)).title
-        target_title = (await bot.get_chat(target_id)).title
-     except:
-        source_title = source_id
-        target_title = target_id
+     source_data = temp.AUTO_FWD.get(user_id)
+     if not source_data:
+        return await query.answer("Session expired. Please add pair again.", show_alert=True)
+     
+     source_id = source_data['source_id']
+     source_title = source_data['source_title']
+     
+     # Get target title from DB channels
+     target_channel = await db.get_channel_details(user_id, target_id)
+     target_title = target_channel['title'] if target_channel else target_id
+     
      await db.add_pair(user_id, source_id, source_title, target_id, target_title)
+     from .auto_forward import update_pairs_cache
+     await update_pairs_cache()
+     
+     # Update menu to show it's added and allow more
+     channels = await db.get_user_channels(user_id)
+     target_buttons = []
+     user_pairs = await db.get_user_pairs(user_id)
+     added_targets = [str(p['target_id']) for p in user_pairs if str(p['source_id']) == str(source_id)]
+     
+     for channel in channels:
+        status = "✅ " if str(channel['chat_id']) in added_targets else ""
+        target_buttons.append([InlineKeyboardButton(f"{status}{channel['title']}", callback_data=f"settings#addpt|{source_id}|{channel['chat_id']}")])
+     
+     target_buttons.append([InlineKeyboardButton("✅ Done", callback_data="settings#autoforward")])
+     target_buttons.append([InlineKeyboardButton("❌ Cancel", callback_data="settings#autoforward")])
+     
+     await query.answer(f"Added destination: {target_title}")
      await query.message.edit_text(
-        f"<b>Successfully paired!</b>\n\n<b>Source:</b> <code>{source_title}</code>\n<b>Target:</b> <code>{target_title}</code>",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('↩ Back', callback_data="settings#autoforward")]]))
+        f"<b>Source:</b> <code>{source_title}</code>\n\n<b>Select more destinations or click Done:</b>",
+        reply_markup=InlineKeyboardMarkup(target_buttons))
       
 def main_buttons():
   buttons = [[
