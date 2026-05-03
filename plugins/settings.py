@@ -434,7 +434,7 @@ async def settings_query(bot, query):
                       callback_data="settings#addpair")])
      buttons.append([InlineKeyboardButton('↩ Back', 
                       callback_data="settings#main")])
-   elif type=="addpair":
+  elif type=="addpair":
      await query.message.delete()
      try:
          text = await bot.send_message(user_id, Translation.ADD_PAIR_SOURCE)
