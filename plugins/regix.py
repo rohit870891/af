@@ -150,10 +150,46 @@ async def pub_(bot, message):
     try:
         MSG = []
         pling = 0
+        current_mg = []
+        current_mg_id = None
+        media_group_enabled = configs.get('filters', {}).get('media_group', False)
 
         await edit(m, 'Progressing', 10, sts)
 
         is_continuous = getattr(sts, 'continuous', False)
+
+        async def flush_mg(messages):
+            if not messages:
+                return
+            if forward_tag:
+                if MSG:
+                    await forward(client, MSG, m, sts, protect)
+                    sts.add('total_files', len(MSG))
+                    MSG.clear()
+                    await asyncio.sleep(sleep)
+                if len(messages) == 1:
+                    await forward(client, [messages[0].id], m, sts, protect)
+                    sts.add('total_files', 1)
+                else:
+                    await forward(client, [msg.id for msg in messages], m, sts, protect)
+                    sts.add('total_files', len(messages))
+                await asyncio.sleep(sleep)
+            else:
+                if len(messages) == 1:
+                    new_cap = custom_caption(messages[0], caption)
+                    details = {
+                        "msg_id": messages[0].id,
+                        "media": media(messages[0]),
+                        "caption": new_cap,
+                        "button": button,
+                        "protect": protect
+                    }
+                    await copy(client, details, m, sts)
+                    sts.add('total_files')
+                else:
+                    await copy_media_group_msg(client, messages, m, sts, caption, protect, button)
+                    sts.add('total_files', len(messages))
+                await asyncio.sleep(sleep)
 
         async for message in client.iter_messages(
             client,
@@ -183,17 +219,47 @@ async def pub_(bot, message):
                 sts.add('deleted')
                 continue
 
+            if media_group_enabled:
+                if message.media_group_id:
+                    if current_mg_id is None:
+                        current_mg_id = message.media_group_id
+                        current_mg = [message]
+                        continue
+                    elif message.media_group_id == current_mg_id:
+                        current_mg.append(message)
+                        continue
+                    else:
+                        await flush_mg(current_mg)
+                        current_mg_id = message.media_group_id
+                        current_mg = [message]
+                        continue
+                else:
+                    if current_mg:
+                        await flush_mg(current_mg)
+                        current_mg = []
+                        current_mg_id = None
+
             if forward_tag:
-                MSG.append(message.id)
+                if not media_group_enabled and message.media_group_id:
+                    if MSG:
+                        await forward(client, MSG, m, sts, protect)
+                        sts.add('total_files', len(MSG))
+                        MSG.clear()
+                        await asyncio.sleep(sleep)
+                    await forward(client, [message.id], m, sts, protect)
+                    sts.add('total_files', 1)
+                    await asyncio.sleep(sleep)
+                else:
+                    MSG.append(message.id)
 
-                notcompleted = len(MSG)
-                completed = sts.get('total') - sts.get('fetched')
+                    notcompleted = len(MSG)
+                    completed = sts.get('total') - sts.get('fetched')
 
-                if (notcompleted >= 100 or completed <= 100):
-                    await forward(client, MSG, m, sts, protect)
-                    sts.add('total_files', notcompleted)
-                    await asyncio.sleep(10)
-                    MSG = []
+                    if (notcompleted >= 100 or completed <= 100):
+                        await forward(client, MSG, m, sts, protect)
+                        sts.add('total_files', notcompleted)
+                        await asyncio.sleep(10)
+                        MSG.clear()
 
             else:
                 new_caption = custom_caption(message, caption)
@@ -210,6 +276,16 @@ async def pub_(bot, message):
                 sts.add('total_files')
 
                 await asyncio.sleep(sleep)
+
+        if current_mg:
+            await flush_mg(current_mg)
+            current_mg = []
+            current_mg_id = None
+
+        if MSG:
+            await forward(client, MSG, m, sts, protect)
+            sts.add('total_files', len(MSG))
+            MSG.clear()
 
     except Exception as e:
         await msg_edit(m, f'<b>ERROR:</b>\n<code>{e}</code>', wait=True)
@@ -265,6 +341,34 @@ async def forward(bot, msg, m, sts, protect):
    except Exception as e:
       print(f"Failed to forward messages {msg}: {e}")
       sts.add('deleted')
+
+async def copy_media_group_msg(bot, messages, m, sts, caption, protect, button):
+    try:
+        caption_msg = next((msg for msg in messages if msg.caption), messages[0])
+        new_caption = custom_caption(caption_msg, caption) if caption else None
+        await bot.copy_media_group(
+            chat_id=sts.get('TO'),
+            from_chat_id=sts.get('FROM'),
+            message_id=messages[0].id,
+            captions=new_caption,
+            protect_content=protect
+        )
+    except FloodWait as e:
+        await edit(m, 'Progressing', e.value, sts)
+        await asyncio.sleep(e.value)
+        await edit(m, 'Progressing', 10, sts)
+        await copy_media_group_msg(bot, messages, m, sts, caption, protect, button)
+    except Exception as e:
+        print(f"Failed to copy media group {messages[0].id}: {e}. Falling back to single copy.")
+        for msg in messages:
+            details = {
+                "msg_id": msg.id,
+                "media": media(msg),
+                "caption": custom_caption(msg, caption),
+                "button": button,
+                "protect": protect
+            }
+            await copy(bot, details, m, sts)
 
 PROGRESS = """
 📈 Percetage: {0} %

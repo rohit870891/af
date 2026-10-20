@@ -73,10 +73,15 @@ async def safe_forward_mg(client, user_id, target_id, messages, configs):
                     [m.id for m in messages]
                 )
             else:
+                caption = configs.get('caption')
+                caption_msg = next((m for m in messages if m.caption), messages[0])
+                new_caption = custom_caption(caption_msg, caption) if caption else None
                 await client.copy_media_group(
                     target_id,
                     messages[0].chat.id,
-                    [m.id for m in messages]
+                    messages[0].id,
+                    captions=new_caption,
+                    protect_content=configs.get('protect')
                 )
             return True
         except FloodWait as e:
@@ -84,6 +89,8 @@ async def safe_forward_mg(client, user_id, target_id, messages, configs):
             await asyncio.sleep(e.value + 1)
         except Exception as e:
             logger.error(f"MG forward error for user {user_id}: {e}")
+            for m in messages:
+                await safe_forward(client, user_id, target_id, m, configs)
             return False
 
 async def user_worker(user_id, client):
@@ -102,7 +109,10 @@ async def user_worker(user_id, client):
                     # Media Group
                     valid_msgs = [m for m in data if is_allowed_message(m, configs)]
                     if valid_msgs:
-                        await safe_forward_mg(client, user_id, target_id, valid_msgs, configs)
+                        if len(valid_msgs) == 1:
+                            await safe_forward(client, user_id, target_id, valid_msgs[0], configs)
+                        else:
+                            await safe_forward_mg(client, user_id, target_id, valid_msgs, configs)
                 else:
                     # Single Message
                     if is_allowed_message(data, configs):
@@ -150,7 +160,8 @@ async def auto_forward_handler(client, message):
         USER_QUEUES[owner_id] = asyncio.Queue()
         asyncio.create_task(user_worker(owner_id, client))
 
-    if message.media_group_id:
+    media_group_enabled = configs.get('filters', {}).get('media_group', False)
+    if message.media_group_id and media_group_enabled:
         key = (owner_id, message.media_group_id)
         if key not in MG_BUFFERS:
             MG_BUFFERS[key] = [message]

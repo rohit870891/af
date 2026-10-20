@@ -109,13 +109,22 @@ class Database:
                 'photo': True,
                 'document': True,
                 'animation': True,
-                'sticker': True
+                'sticker': True,
+                'media_group': False
             }
         }
 
         user = await self.col.find_one({'id': int(id)})
         if user:
-            return user.get('configs', default)
+            configs = user.get('configs', default)
+            for k, v in default.items():
+                if k not in configs:
+                    configs[k] = v
+            if 'filters' in configs:
+                for fk, fv in default['filters'].items():
+                    if fk not in configs['filters']:
+                        configs['filters'][fk] = fv
+            return configs
         return default
 
     async def add_bot(self, datas):
@@ -164,7 +173,7 @@ class Database:
         config_filters = (await self.get_configs(user_id))['filters']
 
         for k, v in config_filters.items():
-            if v:  # enabled filters
+            if v and k != 'media_group':  # enabled filters
                 filters.append(str(k))
 
         return filters

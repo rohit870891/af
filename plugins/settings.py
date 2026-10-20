@@ -618,57 +618,62 @@ def size_button(size):
        
 async def filters_buttons(user_id):
   filter = await get_configs(user_id)
-  filters = filter['filters']
+  filters = filter.get('filters', {})
   buttons = [[
        InlineKeyboardButton('🏷️ Forward tag',
-                    callback_data=f'settings_#updatefilter-forward_tag-{filter["forward_tag"]}'),
-       InlineKeyboardButton('✅' if filter['forward_tag'] else '❌',
-                    callback_data=f'settings#updatefilter-forward_tag-{filter["forward_tag"]}')
+                    callback_data=f'settings_#updatefilter-forward_tag-{filter.get("forward_tag", False)}'),
+       InlineKeyboardButton('✅' if filter.get('forward_tag', False) else '❌',
+                    callback_data=f'settings#updatefilter-forward_tag-{filter.get("forward_tag", False)}')
        ],[
        InlineKeyboardButton('🖍️ Texts',
-                    callback_data=f'settings_#updatefilter-text-{filters["text"]}'),
-       InlineKeyboardButton('✅' if filters['text'] else '❌',
-                    callback_data=f'settings#updatefilter-text-{filters["text"]}')
+                    callback_data=f'settings_#updatefilter-text-{filters.get("text", False)}'),
+       InlineKeyboardButton('✅' if filters.get('text', False) else '❌',
+                    callback_data=f'settings#updatefilter-text-{filters.get("text", False)}')
        ],[
        InlineKeyboardButton('📁 Documents',
-                    callback_data=f'settings_#updatefilter-document-{filters["document"]}'),
-       InlineKeyboardButton('✅' if filters['document'] else '❌',
-                    callback_data=f'settings#updatefilter-document-{filters["document"]}')
+                    callback_data=f'settings_#updatefilter-document-{filters.get("document", True)}'),
+       InlineKeyboardButton('✅' if filters.get('document', True) else '❌',
+                    callback_data=f'settings#updatefilter-document-{filters.get("document", True)}')
        ],[
        InlineKeyboardButton('🎞️ Videos',
-                    callback_data=f'settings_#updatefilter-video-{filters["video"]}'),
-       InlineKeyboardButton('✅' if filters['video'] else '❌',
-                    callback_data=f'settings#updatefilter-video-{filters["video"]}')
+                    callback_data=f'settings_#updatefilter-video-{filters.get("video", True)}'),
+       InlineKeyboardButton('✅' if filters.get('video', True) else '❌',
+                    callback_data=f'settings#updatefilter-video-{filters.get("video", True)}')
        ],[
        InlineKeyboardButton('📷 Photos',
-                    callback_data=f'settings_#updatefilter-photo-{filters["photo"]}'),
-       InlineKeyboardButton('✅' if filters['photo'] else '❌',
-                    callback_data=f'settings#updatefilter-photo-{filters["photo"]}')
+                    callback_data=f'settings_#updatefilter-photo-{filters.get("photo", True)}'),
+       InlineKeyboardButton('✅' if filters.get('photo', True) else '❌',
+                    callback_data=f'settings#updatefilter-photo-{filters.get("photo", True)}')
        ],[
        InlineKeyboardButton('🎧 Audios',
-                    callback_data=f'settings_#updatefilter-audio-{filters["audio"]}'),
-       InlineKeyboardButton('✅' if filters['audio'] else '❌',
-                    callback_data=f'settings#updatefilter-audio-{filters["audio"]}')
+                    callback_data=f'settings_#updatefilter-audio-{filters.get("audio", True)}'),
+       InlineKeyboardButton('✅' if filters.get('audio', True) else '❌',
+                    callback_data=f'settings#updatefilter-audio-{filters.get("audio", True)}')
        ],[
        InlineKeyboardButton('🎤 Voices',
-                    callback_data=f'settings_#updatefilter-voice-{filters["voice"]}'),
-       InlineKeyboardButton('✅' if filters['voice'] else '❌',
-                    callback_data=f'settings#updatefilter-voice-{filters["voice"]}')
+                    callback_data=f'settings_#updatefilter-voice-{filters.get("voice", True)}'),
+       InlineKeyboardButton('✅' if filters.get('voice', True) else '❌',
+                    callback_data=f'settings#updatefilter-voice-{filters.get("voice", True)}')
        ],[
        InlineKeyboardButton('🎭 Animations',
-                    callback_data=f'settings_#updatefilter-animation-{filters["animation"]}'),
-       InlineKeyboardButton('✅' if filters['animation'] else '❌',
-                    callback_data=f'settings#updatefilter-animation-{filters["animation"]}')
+                    callback_data=f'settings_#updatefilter-animation-{filters.get("animation", True)}'),
+       InlineKeyboardButton('✅' if filters.get('animation', True) else '❌',
+                    callback_data=f'settings#updatefilter-animation-{filters.get("animation", True)}')
        ],[
        InlineKeyboardButton('🃏 Stickers',
-                    callback_data=f'settings_#updatefilter-sticker-{filters["sticker"]}'),
-       InlineKeyboardButton('✅' if filters['sticker'] else '❌',
-                    callback_data=f'settings#updatefilter-sticker-{filters["sticker"]}')
+                    callback_data=f'settings_#updatefilter-sticker-{filters.get("sticker", True)}'),
+       InlineKeyboardButton('✅' if filters.get('sticker', True) else '❌',
+                    callback_data=f'settings#updatefilter-sticker-{filters.get("sticker", True)}')
+       ],[
+       InlineKeyboardButton('🗂️ Media Group',
+                    callback_data=f'settings_#updatefilter-media_group-{filters.get("media_group", False)}'),
+       InlineKeyboardButton('✅' if filters.get('media_group', False) else '❌',
+                    callback_data=f'settings#updatefilter-media_group-{filters.get("media_group", False)}')
        ],[
        InlineKeyboardButton('▶️ Skip duplicate',
-                    callback_data=f'settings_#updatefilter-duplicate-{filter["duplicate"]}'),
-       InlineKeyboardButton('✅' if filter['duplicate'] else '❌',
-                    callback_data=f'settings#updatefilter-duplicate-{filter["duplicate"]}')
+                    callback_data=f'settings_#updatefilter-duplicate-{filter.get("duplicate", True)}'),
+       InlineKeyboardButton('✅' if filter.get('duplicate', True) else '❌',
+                    callback_data=f'settings#updatefilter-duplicate-{filter.get("duplicate", True)}')
        ],[
        InlineKeyboardButton('⫷ back',
                     callback_data="settings#main")
